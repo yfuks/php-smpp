@@ -97,7 +97,7 @@ class GsmEncoderHelper
             'я' => "\x04\x4F",
             // all \x2? removed
             // all \x3? removed
-            // all \x4? removed
+            '¡' => "\x40",
             'Ä' => "\x5B", 'Ö' => "\x5C", 'Ñ' => "\x5D", 'Ü' => "\x5E", '§' => "\x5F",
             '¿' => "\x60",
             'ä' => "\x7B", 'ö' => "\x7C", 'ñ' => "\x7D", 'ü' => "\x7E", 'à' => "\x7F",
