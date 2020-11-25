@@ -100,12 +100,12 @@ class Client
      * @param Socket $transport
      * @param string $debugHandler
      */
-    public function __construct(Socket $transport, $debugHandler=null)
+    public function __construct(Socket $transport, $debugHandler = null)
     {
         // Internal parameters
-        $this->sequenceNumber=1;
-        $this->debug=false;
-        $this->pduQueue=array();
+        $this->sequenceNumber = 1;
+        $this->debug = false;
+        $this->pduQueue = [];
 
         $this->transport = $transport;
         $this->debugHandler = $debugHandler ? $debugHandler : 'error_log';
@@ -118,11 +118,16 @@ class Client
      * @param string $pass - ESME password
      * @return bool
      * @throws SmppException
+     * @throws \Exception
      */
     public function bindReceiver($login, $pass)
     {
-        if (!$this->transport->isOpen()) return false;
-        if($this->debug) call_user_func($this->debugHandler, 'Binding receiver...');
+        if (!$this->transport->isOpen()) {
+            return false;
+        }
+        if ($this->debug) {
+            call_user_func($this->debugHandler, 'Binding receiver...');
+        }
 
         $response = $this->bind($login, $pass, SMPP::BIND_RECEIVER);
 
@@ -140,6 +145,7 @@ class Client
      * @param string $pass - ESME password
      * @return bool
      * @throws SmppException
+     * @throws \Exception
      */
     public function bindTransmitter($login, $pass)
     {
@@ -165,6 +171,7 @@ class Client
      * @param $login
      * @param $pass
      * @return bool
+     * @throws \Exception
      */
     public function bindTransceiver($login, $pass)
     {
@@ -269,7 +276,7 @@ class Client
         // Parse reply
         $posID = strpos($reply->body,"\0",0);
         $posDate = strpos($reply->body,"\0",$posID+1);
-        $data = array();
+        $data = [];
         $data['message_id'] = substr($reply->body, 0, $posID);
         $data['final_date'] = substr($reply->body, $posID,$posDate-$posID);
         $data['final_date'] = $data['final_date'] ? $this->parseSmppTime(trim($data['final_date'])) : null;
@@ -392,7 +399,7 @@ class Client
                     $from,
                     $to,
                     null,
-                    (empty($tags) ? array($payload) : array_merge($tags,$payload)),
+                    (empty($tags) ? [$payload] : array_merge($tags,$payload)),
                     $dataCoding,
                     $priority,
                     $scheduleDeliveryTime,
@@ -548,7 +555,7 @@ class Client
                 if (!$slowSplit) return str_split($message,$split);
 
                 // Split the message char-by-char
-                $parts = array();
+                $parts = [];
                 $part = null;
                 $n = 0;
                 for($i=0;$i<$msg_length;$i++) {
@@ -643,10 +650,12 @@ class Client
 
         // Check for optional params, and parse them
         if (current($ar) !== false) {
-            $tags = array();
+            $tags = [];
             do {
                 $tag = $this->parseTag($ar);
-                if ($tag !== false) $tags[] = $tag;
+                if ($tag !== false) {
+                    $tags[] = $tag;
+                }
             } while (current($ar) !== false);
         } else {
             $tags = null;
@@ -720,9 +729,9 @@ class Client
     {
         // Check the queue first
         $queueLength = count($this->pduQueue);
-        for($i=0; $i<$queueLength; $i++) {
+        for($i=0; $i < $queueLength; $i++) {
             $pdu=$this->pduQueue[$i];
-            if($pdu->id==SMPP::ENQUIRE_LINK) {
+            if($pdu->id == SMPP::ENQUIRE_LINK) {
                 //remove response
                 array_splice($this->pduQueue, $i, 1);
                 $this->sendPDU(new Pdu(SMPP::ENQUIRE_LINK_RESP, SMPP::ESME_ROK, $pdu->sequence, "\x00"));
@@ -732,9 +741,9 @@ class Client
         // Check the transport for data
         if ($this->transport->hasData()) {
             $pdu = $this->readPDU();
-            if($pdu->id==SMPP::ENQUIRE_LINK) {
+            if($pdu->id == SMPP::ENQUIRE_LINK) {
                 $this->sendPDU(new Pdu(SMPP::ENQUIRE_LINK_RESP, SMPP::ESME_ROK, $pdu->sequence, "\x00"));
-            } else if ($pdu) {
+            } elseif ($pdu) {
                 array_push($this->pduQueue, $pdu);
             }
         }

@@ -45,9 +45,9 @@ class Socket
         $this->debugHandler = $debugHandler ? $debugHandler : 'error_log';
 
         // Deal with optional port
-        $h = array();
+        $h = [];
         foreach ($hosts as $key => $host) {
-            $h[] = array($host, is_array($ports) ? $ports[$key] : $ports);
+            $h[] = [$host, is_array($ports) ? $ports[$key] : $ports];
         }
         if (self::$randomHost) shuffle($h);
         $this->resolveHosts($h);
@@ -67,8 +67,8 @@ class Socket
         $i = 0;
         foreach($hosts as $host) {
             list($hostname,$port) = $host;
-            $ip4s = array();
-            $ip6s = array();
+            $ip4s = [];
+            $ip6s = [];
             if (preg_match('/^([12]?[0-9]?[0-9]\.){3}([12]?[0-9]?[0-9])$/',$hostname)) {
                 // IPv4 address
                 $ip4s[] = $hostname;
@@ -125,14 +125,17 @@ class Socket
             }
 
             if ($this->debug) {
-                $i += count($ip4s)+count($ip6s);
+                $i += count($ip4s) + count($ip6s);
             }
 
             // Add results to pool
-            $this->hosts[] = array($hostname,$port,$ip6s,$ip4s);
+            $this->hosts[] = [$hostname, $port, $ip6s, $ip4s];
         }
         if ($this->debug) {
-            call_user_func($this->debugHandler, "Built connection pool of ".count($this->hosts)." host(s) with $i ip(s) in total");
+            call_user_func(
+                $this->debugHandler,
+                "Built connection pool of " . count($this->hosts) . " host(s) with " . $i . " ip(s) in total"
+            );
         }
         if (empty($this->hosts)) {
             throw new \InvalidArgumentException('No valid hosts was found');
@@ -221,18 +224,27 @@ class Socket
      */
     public function isOpen()
     {
-        if (!is_resource($this->socket)) return false;
+        if (!is_resource($this->socket)) {
+            return false;
+        }
+
         $r = null;
         $w = null;
-        $e = array($this->socket);
+        $e = [$this->socket];
         $res = socket_select($r,$w,$e,0);
+
         if ($res === false) {
             throw new SocketTransportException(
                 'Could not examine socket; '.socket_strerror(socket_last_error()),
                 socket_last_error()
             );
         }
-        if (!empty($e)) return false; // if there is an exception on our socket it's probably dead
+
+        // if there is an exception on our socket it's probably dead
+        if (!empty($e)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -316,7 +328,7 @@ class Socket
      */
     public function close()
     {
-        $arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+        $arrOpt = ['l_onoff' => 1, 'l_linger' => 1];
         socket_set_block($this->socket);
         socket_set_option($this->socket, SOL_SOCKET, SO_LINGER, $arrOpt);
         socket_close($this->socket);
@@ -329,12 +341,21 @@ class Socket
      */
     public function hasData()
     {
-        $r = array($this->socket);
+        $r = [$this->socket];
         $w = null;
         $e = null;
         $res = socket_select($r,$w,$e,0);
-        if ($res === false) throw new SocketTransportException('Could not examine socket; '.socket_strerror(socket_last_error()), socket_last_error());
-        if (!empty($r)) return true;
+        if ($res === false) {
+            throw new SocketTransportException(
+                'Could not examine socket; ' . socket_strerror(socket_last_error()),
+                socket_last_error()
+            );
+        }
+
+        if (!empty($r)) {
+            return true;
+        }
+
         return false;
     }
 
@@ -385,7 +406,10 @@ class Socket
             $buf = '';
             $r += socket_recv($this->socket,$buf,$length-$r,MSG_DONTWAIT);
             if ($r === false) {
-                throw new SocketTransportException('Could not read '.$length.' bytes from socket; '.socket_strerror(socket_last_error()), socket_last_error());
+                throw new SocketTransportException(
+                    'Could not read ' . $length . ' bytes from socket; ' . socket_strerror(socket_last_error()),
+                    socket_last_error()
+                );
             }
             $d .= $buf;
             if ($r == $length) {
@@ -393,17 +417,23 @@ class Socket
             }
 
             // wait for data to be available, up to timeout
-            $r = array($this->socket);
+            $r = [$this->socket];
             $w = null;
-            $e = array($this->socket);
-            $res = socket_select($r,$w,$e,$readTimeout['sec'],$readTimeout['usec']);
+            $e = [$this->socket];
+            $res = socket_select($r,$w,$e, $readTimeout['sec'], $readTimeout['usec']);
 
             // check
             if ($res === false) {
-                throw new SocketTransportException('Could not examine socket; '.socket_strerror(socket_last_error()), socket_last_error());
+                throw new SocketTransportException(
+                    'Could not examine socket; ' . socket_strerror(socket_last_error()),
+                    socket_last_error()
+                );
             }
             if (!empty($e)) {
-                throw new SocketTransportException('Socket exception while waiting for data; '.socket_strerror(socket_last_error()), socket_last_error());
+                throw new SocketTransportException(
+                    'Socket exception while waiting for data; ' . socket_strerror(socket_last_error()),
+                    socket_last_error()
+                );
             }
             if (empty($r)) {
                 throw new SocketTransportException('Timed out waiting for data on socket');
@@ -426,7 +456,10 @@ class Socket
         while ($r>0) {
             $wrote = socket_write($this->socket,$buffer,$r);
             if ($wrote === false) {
-                throw new SocketTransportException('Could not write '.$length.' bytes to socket; '.socket_strerror(socket_last_error()), socket_last_error());
+                throw new SocketTransportException(
+                    'Could not write ' . $length . ' bytes to socket; ' . socket_strerror(socket_last_error()),
+                    socket_last_error()
+                );
             }
             $r -= $wrote;
             if ($r == 0) {
@@ -437,16 +470,22 @@ class Socket
 
             // wait for the socket to accept more data, up to timeout
             $r = null;
-            $w = array($this->socket);
-            $e = array($this->socket);
-            $res = socket_select($r,$w,$e,$writeTimeout['sec'],$writeTimeout['usec']);
+            $w = [$this->socket];
+            $e = [$this->socket];
+            $res = socket_select($r,$w,$e, $writeTimeout['sec'], $writeTimeout['usec']);
 
             // check
             if ($res === false) {
-                throw new SocketTransportException('Could not examine socket; '.socket_strerror(socket_last_error()), socket_last_error());
+                throw new SocketTransportException(
+                    'Could not examine socket; ' . socket_strerror(socket_last_error()),
+                    socket_last_error()
+                );
             }
             if (!empty($e)) {
-                throw new SocketTransportException('Socket exception while waiting to write data; '.socket_strerror(socket_last_error()), socket_last_error());
+                throw new SocketTransportException(
+                    'Socket exception while waiting to write data; ' . socket_strerror(socket_last_error()),
+                    socket_last_error()
+                );
             }
             if (empty($w)) {
                 throw new SocketTransportException('Timed out waiting to write data on socket');
