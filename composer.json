@@ -4,7 +4,7 @@
   "keywords": ["smpp", "sms", "texting", "gsm"],
   "homepage": "https://github.com/alexandr-mironov/php-smpp",
   "type": "library",
-  "license": "LGPL",
+  "license": "LGPL-2.0-or-later",
   "authors": [
     {
       "name": "Alexandr Mironov",
