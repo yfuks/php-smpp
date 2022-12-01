@@ -441,7 +441,7 @@ class Client
             }
         }
 
-        return $this->submit_sm($from, $to, $short_message, $tags, $dataCoding);
+        return $this->submit_sm($from, $to, $short_message, $tags, $dataCoding, $priority);
     }
 
     /**
