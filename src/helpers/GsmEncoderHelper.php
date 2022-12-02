@@ -27,8 +27,35 @@ class GsmEncoderHelper
     public static function utf8_to_gsm0338($string)
     {
         $dict = [
-            '@' => "\x00", '£' => "\x01", '$' => "\x02", '¥' => "\x03", 'è' => "\x04", 'é' => "\x05", 'ù' => "\x06", 'ì' => "\x07", 'ò' => "\x08", 'Ç' => "\x09", 'Ø' => "\x0B", 'ø' => "\x0C", 'Å' => "\x0E", 'å' => "\x0F",
-            'Δ' => "\x10", '_' => "\x11", 'Φ' => "\x12", 'Γ' => "\x13", 'Λ' => "\x14", 'Ω' => "\x15", 'Π' => "\x16", 'Ψ' => "\x17", 'Σ' => "\x18", 'Θ' => "\x19", 'Ξ' => "\x1A", 'Æ' => "\x1C", 'æ' => "\x1D", 'ß' => "\x1E", 'É' => "\x1F",
+            '@' => "\x00",
+            '£' => "\x01",
+            '$' => "\x02",
+            '¥' => "\x03",
+            'è' => "\x04",
+            'é' => "\x05",
+            'ù' => "\x06",
+            'ì' => "\x07",
+            'ò' => "\x08",
+            'Ç' => "\x09",
+            'Ø' => "\x0B",
+            'ø' => "\x0C",
+            'Å' => "\x0E",
+            'å' => "\x0F",
+            'Δ' => "\x10",
+            '_' => "\x11",
+            'Φ' => "\x12",
+            'Γ' => "\x13",
+            'Λ' => "\x14",
+            'Ω' => "\x15",
+            'Π' => "\x16",
+            'Ψ' => "\x17",
+            'Σ' => "\x18",
+            'Θ' => "\x19",
+            'Ξ' => "\x1A",
+            'Æ' => "\x1C",
+            'æ' => "\x1D",
+            'ß' => "\x1E",
+            'É' => "\x1F",
             'А' => "\x04\x10",
             'Б' => "\x04\x11",
             'В' => "\x04\x12",
@@ -98,10 +125,26 @@ class GsmEncoderHelper
             // all \x2? removed
             // all \x3? removed
             '¡' => "\x40",
-            'Ä' => "\x5B", 'Ö' => "\x5C", 'Ñ' => "\x5D", 'Ü' => "\x5E", '§' => "\x5F",
+            'Ä' => "\x5B",
+            'Ö' => "\x5C",
+            'Ñ' => "\x5D",
+            'Ü' => "\x5E",
+            '§' => "\x5F",
             '¿' => "\x60",
-            'ä' => "\x7B", 'ö' => "\x7C", 'ñ' => "\x7D", 'ü' => "\x7E", 'à' => "\x7F",
-            '^' => "\x1B\x14", '{' => "\x1B\x28", '}' => "\x1B\x29", '\\' => "\x1B\x2F", '[' => "\x1B\x3C", '~' => "\x1B\x3D", ']' => "\x1B\x3E", '|' => "\x1B\x40", '€' => "\x1B\x65"
+            'ä' => "\x7B",
+            'ö' => "\x7C",
+            'ñ' => "\x7D",
+            'ü' => "\x7E",
+            'à' => "\x7F",
+            '^' => "\x1B\x14",
+            '{' => "\x1B\x28",
+            '}' => "\x1B\x29",
+            '\\' => "\x1B\x2F",
+            '[' => "\x1B\x3C",
+            '~' => "\x1B\x3D",
+            ']' => "\x1B\x3E",
+            '|' => "\x1B\x40",
+            '€' => "\x1B\x65",
         ];
         // $converted = strtr($string, $dict);
 
@@ -119,8 +162,8 @@ class GsmEncoderHelper
      */
     public static function countGsm0338Length($utf8String)
     {
-        $len = mb_strlen($utf8String,'utf-8');
-        $len += preg_match_all('/[\\^{}\\\~€|\\[\\]]/mu',$utf8String,$m);
+        $len = mb_strlen($utf8String, 'utf-8');
+        $len += (int)preg_match_all('/[\\^{}\\\~€|\\[\\]]/mu', $utf8String, $m);
         return $len;
     }
 
@@ -149,7 +192,7 @@ class GsmEncoderHelper
                 // the current byte is full, add it to the encoded data.
                 $packed .= chr($currentByte);
                 // shift left and append the left shifted septet to the current byte
-                $currentByte = $septet = $septet >> (7 - ($offset - 8 ));
+                $currentByte = $septet = $septet >> (15 - $offset); // same as (7 - ($offset - 8))
                 // update offset
                 $offset -= 8; // 7 - (7 - ($offset - 8))
             }

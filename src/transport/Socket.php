@@ -258,13 +258,13 @@ class Socket
 
     /**
      * Convert a milliseconds into a socket sec+usec array
-     * @param integer $millisec
+     * @param integer $milliseconds
      * @return array
      */
-    private function millisecToSolArray($millisec)
+    private function millisecToSolArray($milliseconds)
     {
-        $usec = $millisec * 1000;
-        return ['sec' => floor($usec / 1000000), 'usec' => $usec % 1000000];
+        $usec = $milliseconds * 1000;
+        return ['sec' => (int)floor($usec / 1000000), 'usec' => $usec % 1000000];
     }
 
     /**

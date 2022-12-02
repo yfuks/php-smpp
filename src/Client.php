@@ -3,7 +3,9 @@
 
 namespace smpp;
 
+use Exception;
 use smpp\exceptions\SmppException;
+use smpp\exceptions\SocketTransportException;
 use smpp\transport\Socket;
 
 /**
@@ -30,9 +32,17 @@ use smpp\transport\Socket;
  */
 class Client
 {
+    /** @var string  */
     const MODE_TRANSMITTER = 'transmitter';
+
+    /** @var string  */
     const MODE_TRANSCEIVER = 'transceiver';
+
+    /** @var string  */
     const MODE_RECEIVER = 'receiver';
+
+    /** @var int number of seconds which socket will sleep before next reconnect try */
+    const RECONNECT_DELAY = 1;
 
     // SMPP bind parameters
     public static $systemType = "WWW";
@@ -51,13 +61,13 @@ class Client
     public static $smsSmDefaultMessageID = 0x00;
 
     /**
-     * SMPP v3.4 says octect string are "not necessarily NULL terminated".
+     * SMPP v3.4 says octet string are "not necessarily NULL terminated".
      * Switch to toggle this feature
      * @var boolean
      *
-     * set NULL teminate octetstrings FALSE as default
+     * set NULL terminate octet strings FALSE as default
      */
-    public static $smsNullTerminateOctetstrings = false;
+    public static $smsNullTerminateOctetStrings = false;
 
     /**
      * Use sar_msg_ref_num and sar_total_segments with 16 bit tags
@@ -118,12 +128,12 @@ class Client
      * @param string $pass - ESME password
      * @return bool
      * @throws SmppException
-     * @throws \Exception
+     * @throws Exception
      */
     public function bindReceiver($login, $pass)
     {
         if (!$this->transport->isOpen()) {
-            return false;
+            throw new SocketTransportException('Socket is not open');
         }
         if ($this->debug) {
             call_user_func($this->debugHandler, 'Binding receiver...');
@@ -145,12 +155,12 @@ class Client
      * @param string $pass - ESME password
      * @return bool
      * @throws SmppException
-     * @throws \Exception
+     * @throws Exception
      */
     public function bindTransmitter($login, $pass)
     {
         if (!$this->transport->isOpen()) {
-            return false;
+            throw new SocketTransportException('Socket is not open');
         }
 
         if ($this->debug) {
@@ -171,12 +181,12 @@ class Client
      * @param $login
      * @param $pass
      * @return bool
-     * @throws \Exception
+     * @throws Exception
      */
     public function bindTransceiver($login, $pass)
     {
         if (!$this->transport->isOpen()) {
-            return false;
+            throw new SocketTransportException('Socket is not open');
         }
 
         $response = $this->bind($login, $pass, SMPP::BIND_TRANSCEIVER);
@@ -204,7 +214,9 @@ class Client
 
         $response = $this->sendCommand(SMPP::UNBIND, "");
 
-        if ($this->debug) call_user_func($this->debugHandler, "Unbind status   : " . $response->status);
+        if ($this->debug) {
+            call_user_func($this->debugHandler, "Unbind status   : " . $response->status);
+        }
         $this->transport->close();
     }
 
@@ -216,7 +228,7 @@ class Client
      * @param string $input
      * @param boolean $newDates
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     public function parseSmppTime($input, $newDates = true)
     {
@@ -264,7 +276,7 @@ class Client
      * @param string $messageID
      * @param Address $source
      * @return array
-     * @throws \Exception
+     * @throws Exception
      */
     public function queryStatus($messageID, Address $source)
     {
@@ -276,7 +288,9 @@ class Client
             $source->value
         );
         $reply = $this->sendCommand(SMPP::QUERY_SM, $pduBody);
-        if (!$reply || $reply->status != SMPP::ESME_ROK) return null;
+        if (!$reply || $reply->status != SMPP::ESME_ROK) {
+            return null;
+        }
 
         // Parse reply
         $posID = strpos($reply->body, "\0", 0);
@@ -459,6 +473,7 @@ class Client
      * @param string $validityPeriod
      * @param string $esmClass
      * @return string message id
+     * @throws Exception
      */
     protected function submit_sm(
         Address $source,
@@ -470,8 +485,7 @@ class Client
                 $scheduleDeliveryTime = null,
                 $validityPeriod = null,
                 $esmClass = null
-    )
-    {
+    ) {
         if (is_null($esmClass)) $esmClass = self::$smsEsmClass;
 
         // Construct PDU with mandatory fields
@@ -479,7 +493,7 @@ class Client
             'a1cca' . (strlen($source->value) + 1)
             . 'cca' . (strlen($destination->value) + 1)
             . 'ccc' . ($scheduleDeliveryTime ? 'a16x' : 'a1') . ($validityPeriod ? 'a16x' : 'a1')
-            . 'ccccca' . (strlen($short_message) + (self::$smsNullTerminateOctetstrings ? 1 : 0)),
+            . 'ccccca' . (strlen($short_message) + (self::$smsNullTerminateOctetStrings ? 1 : 0)),
             self::$smsServiceType,
             $source->ton,
             $source->npi,
@@ -587,7 +601,7 @@ class Client
      * @param $pass
      * @param $commandID
      * @return bool|Pdu
-     * @throws \Exception
+     * @throws Exception
      */
     protected function bind($login, $pass, $commandID)
     {
@@ -716,7 +730,7 @@ class Client
     /**
      * Send the enquire link command.
      * @return Pdu
-     * @throws \Exception
+     * @throws Exception
      */
     public function enquireLink()
     {
@@ -757,12 +771,12 @@ class Client
     /**
      * Reconnect to SMSC.
      * This is mostly to deal with the situation were we run out of sequence numbers
-     * @throws \Exception
+     * @throws Exception
      */
     protected function reconnect()
     {
         $this->close();
-        sleep(1);
+        sleep(self::RECONNECT_DELAY);
         $this->transport->open();
         $this->sequenceNumber = 1;
 
@@ -783,7 +797,7 @@ class Client
                 break;
             }
             default:
-                throw new \Exception('Invalid mode: ' . $this->mode);
+                throw new Exception('Invalid mode: ' . $this->mode);
         }
     }
 
@@ -792,12 +806,12 @@ class Client
      * @param integer $id - command ID
      * @param string $pduBody - PDU body
      * @return bool|Pdu
-     * @throws \Exception
+     * @throws Exception
      */
     protected function sendCommand($id, $pduBody)
     {
         if (!$this->transport->isOpen()) {
-            return false;
+            throw new SocketTransportException('Socket is not open');
         }
         $pdu = new Pdu($id, 0, $this->sequenceNumber, $pduBody);
         $this->sendPDU($pdu);
